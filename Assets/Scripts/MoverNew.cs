@@ -111,11 +111,11 @@ public class MoverNew : MonoBehaviour
 
         if (diffX != 0)
         {
-            stepX = Mathf.Sign(diffX);
+            stepX = (int)Mathf.Sign(diffX);
         }
         else if (diffY != 0)
         {
-            stepY = Mathf.Sign(diffY);
+            stepY = (int)Mathf.Sign(diffY);
         }
 
         // ¬ычисл€ем координаты следующей клетки
