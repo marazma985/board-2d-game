@@ -1,0 +1,4 @@
+repository "BoardGamePrototype/BoardGamePrototype@10170723848202@cloud"
+  path "/"
+    br "/main"
+    co "/main"
