@@ -66,7 +66,7 @@ public class MoverNew : MonoBehaviour
         }
     }
 
-    // Ћогика выбора следующего шага (8 направлений)
+    // Ћогика выбора следующего шага (4 направлени€ - только ортогонально)
     void PlanNextStep()
     {
         Vector3Int currentCell = gameGrid.WorldToCell(transform.position);
@@ -74,9 +74,27 @@ public class MoverNew : MonoBehaviour
         int diffX = targetCell.x - currentCell.x;
         int diffY = targetCell.y - currentCell.y;
 
-        // Ќормализуем направление: получаем -1, 0 или 1
-        int stepX = (int)Mathf.Sign(diffX);
-        int stepY = (int)Mathf.Sign(diffY);
+        // ƒвигаемс€ сначала по оси с наибольшей разницей (ортогональное движение)
+        // Ёто предотвращает диагональное движение и зацикливание
+        int stepX = 0;
+        int stepY = 0;
+
+        if (Mathf.Abs(diffX) >= Mathf.Abs(diffY))
+        {
+            // ƒвигаемс€ по X
+            if (diffX != 0)
+                stepX = (int)Mathf.Sign(diffX);
+            else if (diffY != 0)
+                stepY = (int)Mathf.Sign(diffY);
+        }
+        else
+        {
+            // ƒвигаемс€ по Y
+            if (diffY != 0)
+                stepY = (int)Mathf.Sign(diffY);
+            else if (diffX != 0)
+                stepX = (int)Mathf.Sign(diffX);
+        }
 
         // ¬ычисл€ем координаты следующей клетки
         Vector3Int nextCell = new Vector3Int(currentCell.x + stepX, currentCell.y + stepY, 0);
