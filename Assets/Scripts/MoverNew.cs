@@ -1,7 +1,5 @@
 using System;
-using Unity.VisualScripting;
 using UnityEngine;
-using static UnityEngine.RuleTile.TilingRuleOutput;
 
 public class MoverNew : MonoBehaviour
 {
@@ -11,11 +9,13 @@ public class MoverNew : MonoBehaviour
     private Vector3Int targetCell; // Целевая ячейка (координаты сетки)
     private bool isMoving = false;
     private Vector3 currentStepTarget; // Куда движемся прямо сейчас (соседняя клетка)
+    private Vector3Int lastKnownCell; // Последняя известная позиция в клетках
 
     void Start()
     {
         if (gameGrid == null) gameGrid = FindObjectOfType<Grid>();
         SnapToGridInstantly();
+        lastKnownCell = gameGrid.WorldToCell(transform.position);
     }
 
     // Твой код для старта на сетке
@@ -24,6 +24,7 @@ public class MoverNew : MonoBehaviour
         if (gameGrid == null) return;
         Vector3Int cell = gameGrid.WorldToCell(transform.position);
         transform.position = GetCellCenterWorld(cell);
+        lastKnownCell = cell;
     }
 
     void Update()
@@ -36,7 +37,19 @@ public class MoverNew : MonoBehaviour
 
             // Запоминаем целевую клетку
             targetCell = gameGrid.WorldToCell(mousePos);
+            
+            // Получаем текущую клетку (округленную)
+            Vector3Int currentCell = GetRoundedCurrentCell();
+            
+            // Если уже в целевой клетке - ничего не делаем
+            if (currentCell == targetCell)
+            {
+                isMoving = false;
+                return;
+            }
+            
             isMoving = true;
+            lastKnownCell = currentCell;
 
             // Сразу планируем первый шаг
             PlanNextStep();
@@ -52,9 +65,11 @@ public class MoverNew : MonoBehaviour
             {
                 transform.position = currentStepTarget; // Фиксация
 
+                // Обновляем известную позицию
+                lastKnownCell = gameGrid.WorldToCell(transform.position);
+
                 // Если мы еще не в финальной точке, планируем следующий шаг
-                Vector3Int currentCell = gameGrid.WorldToCell(transform.position);
-                if (currentCell != targetCell)
+                if (lastKnownCell != targetCell)
                 {
                     PlanNextStep();
                 }
@@ -66,34 +81,41 @@ public class MoverNew : MonoBehaviour
         }
     }
 
+    // Получаем текущую клетку с правильным округлением
+    Vector3Int GetRoundedCurrentCell()
+    {
+        Vector3 worldPos = transform.position;
+        Vector3 localPos = gameGrid.transform.InverseTransformPoint(worldPos);
+        
+        // Округляем до ближайшей клетки
+        int x = Mathf.RoundToInt(localPos.x / gameGrid.cellSize.x);
+        int y = Mathf.RoundToInt(localPos.y / gameGrid.cellSize.y);
+        int z = Mathf.RoundToInt(localPos.z / gameGrid.cellSize.z);
+        
+        return new Vector3Int(x, y, z);
+    }
+
     // Логика выбора следующего шага (4 направления - только ортогонально)
     void PlanNextStep()
     {
-        Vector3Int currentCell = gameGrid.WorldToCell(transform.position);
+        // Используем lastKnownCell вместо преобразования позиции
+        Vector3Int currentCell = lastKnownCell;
 
         int diffX = targetCell.x - currentCell.x;
         int diffY = targetCell.y - currentCell.y;
 
-        // Двигаемся сначала по оси с наибольшей разницей (ортогональное движение)
-        // Это предотвращает диагональное движение и зацикливание
+        // Двигаемся строго по одной оси за раз
+        // Сначала по X, потом по Y (или наоборот, но всегда по одной оси)
         int stepX = 0;
         int stepY = 0;
 
-        if (Mathf.Abs(diffX) >= Mathf.Abs(diffY))
+        if (diffX != 0)
         {
-            // Двигаемся по X
-            if (diffX != 0)
-                stepX = (int)Mathf.Sign(diffX);
-            else if (diffY != 0)
-                stepY = (int)Mathf.Sign(diffY);
+            stepX = Mathf.Sign(diffX);
         }
-        else
+        else if (diffY != 0)
         {
-            // Двигаемся по Y
-            if (diffY != 0)
-                stepY = (int)Mathf.Sign(diffY);
-            else if (diffX != 0)
-                stepX = (int)Mathf.Sign(diffX);
+            stepY = Mathf.Sign(diffY);
         }
 
         // Вычисляем координаты следующей клетки
